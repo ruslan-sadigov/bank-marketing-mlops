@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+
+# UV
+.uv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Ruff
+.ruff_cache/
+
+# Type checkers
+.mypy_cache/
+.pytype/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VS Code
+.vscode/
+
+# Environment variables
+.env
+.envrc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (keep .gitkeep to preserve directory structure)
+backend/data/processed/*.csv
+backend/data/interim/*.csv
+

@@ -1,0 +1,40 @@
+[project]
+name = "bank_marketing_mlops"
+version = "0.1.0"
+description = "ML backend service predicting term deposit subscriptions from bank marketing data"
+readme = "README.md"
+requires-python = ">= 3.12"
+authors = [{ name = "Ruslan", email = "ruslansadiqov76@gmail.com" }]
+dependencies = [
+    "fastapi>=0.116.1",
+    "openpyxl>=3.1.5",
+    # runtime deps go here, e.g. "pandas>=2.2"
+    "pandas>=2.3.1",
+    "python-multipart>=0.0.20",
+    "scikit-learn>=1.7.1",
+    "uvicorn>=0.35.0",
+    "xgboost>=3.2.0",
+]
+
+# [tool.ruff]
+# lint.extend-select = ["ALL"]
+
+[tool.ruff.lint]
+ignore = ["E402"]
+
+[tool.black]
+line-length = 100
+extend-exclude = '^(data|reports|models|notebooks)/'
+
+[tool.isort]
+profile = "black" # keeps isort compatible with Black
+line_length = 100
+skip_glob = ["data/**", "reports/**", "models/**", "notebooks/**"]
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.10.3",
+    "ruff>=0.15.8",
+    "scipy>=1.15.3",
+    "seaborn>=0.13.2",
+]
