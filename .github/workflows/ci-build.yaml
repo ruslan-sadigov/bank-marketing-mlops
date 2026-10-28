@@ -26,4 +26,4 @@ jobs:
           enable-cache: true
 
       - name: Ruff check
-        run: uvx ruff check --output-format=github backend/ frontend/
+        run: uvx ruff@0.15.20 check --output-format=github backend/ frontend/
