@@ -8,7 +8,7 @@ This project predicts whether a bank customer will subscribe to a term deposit f
 - **Task**: Binary classification
 - **Target**: `y` ∈ {no, yes} (encoded as `y_numeric` ∈ {0, 1})
 - **Model**: XGBoost classifier (tuned via Optuna)
-- **Performance**: ~84% accuracy, ~0.92 ROC-AUC, ~0.61 recall on positive class
+- **Performance**: ~84% accuracy, 0.81 ROC-AUC, ~0.61 recall on positive class (at the default 0.5 threshold)
 - **Production features**: 15 (9 categorical, 6 numerical) — `duration` excluded
 
 ---
@@ -176,14 +176,14 @@ XGBClassifier(
 | Macro Avg | 0.665 | 0.741 | 0.689 | 9,043 |
 | Weighted Avg | 0.879 | 0.840 | 0.855 | 9,043 |
 
-**ROC-AUC:** ~0.92
+**ROC-AUC:** 0.81 (see `reports/figures/roc_curve.png`)
 
 ### 5.2 Interpretation
 
-- **High recall on positive class (0.61)** — the model catches most customers who will subscribe, which is business-critical (missing a subscriber costs more than a wasted call)
-- **Lower precision on positive class (0.39)** — ~61% of predicted subscribers won't actually subscribe, but this is an acceptable tradeoff given the class imbalance
-- **ROC-AUC of 0.92** — strong ranking ability regardless of threshold choice
-- Decision threshold could be adjusted upward in production to favor precision if the business prefers fewer false positives
+- **Recall on positive class (0.61)** — at the default 0.5 threshold the model catches about 6 in 10 subscribers. The class weighting (`scale_pos_weight`) shifts the model toward recall at this threshold
+- **Lower precision on positive class (0.39)** — about 61% of predicted subscribers won't actually subscribe. With only 11.7% positives, catching more subscribers means contacting many who will not convert
+- **ROC-AUC of 0.81** — moderate ranking ability. This is the honest ceiling for a leakage-free model; see 5.5 for why it is lower than a model that uses `duration`
+- The decision threshold is a business choice, not a fixed property of the model. 5.5 shows the precision/recall trade-off across thresholds
 
 ### 5.3 Feature Importance
 
@@ -206,6 +206,32 @@ XGBoost's built-in `feature_importances_` (mean gain across all trees) is extrac
 ### 5.4 Model Artifacts
 
 Serialized pipeline saved as `backend/models/bank_xgb.pkl.gz` using `gzip` + `pickletools.optimize()` for minimal file size. Entire `Pipeline` object (preprocessor + model) is pickled together — inference code loads one artifact and calls `.predict()`.
+
+### 5.5 Leakage and Threshold Analysis
+
+Reproduce with `uv run python -m src.models.evaluate_tradeoffs` (after generating the split, see section 8). All numbers below are on the 9,043-row test set.
+
+**Effect of excluding `duration`.** Call duration is only known after a call, so it cannot be used for pre-call prediction. The same model with `duration` added is shown as a leakage reference:
+
+| Features | ROC-AUC | PR-AUC |
+|---|---|---|
+| Production (without `duration`) | 0.806 | 0.464 |
+| With `duration` (leakage reference) | 0.934 | 0.632 |
+
+Most of the gap between 0.81 and 0.93 is the information carried by call length, which is why the production AUC is lower than the figure a leaky model would report.
+
+**Threshold trade-off (production model, positive class):**
+
+| Threshold | Precision | Recall | Customers flagged |
+|---|---|---|---|
+| 0.3 | 0.207 | 0.809 | 45.8% |
+| 0.4 | 0.290 | 0.712 | 28.8% |
+| 0.5 (default) | 0.386 | 0.616 | 18.7% |
+| 0.6 | 0.471 | 0.518 | 12.9% |
+| 0.7 | 0.532 | 0.432 | 9.5% |
+| 0.8 | 0.597 | 0.279 | 5.5% |
+
+**Ranking value.** The top 10% of customers by predicted probability contain 44.7% of all subscribers, about 4.5 times better than random contact.
 
 ---
 
@@ -356,6 +382,9 @@ uv run python -m src.models.train_model
 
 # 3. Regenerate evaluation reports and figures
 uv run python -m src.visualization.visualize
+
+# 4. Reproduce the leakage and threshold analysis (section 5.5)
+uv run python -m src.models.evaluate_tradeoffs
 ```
 
 Random seed `42` is used throughout (train/test split, XGBoost model) for deterministic results.
